@@ -234,8 +234,8 @@ function Scene3D() {
   
   // Direction mapping for the 3D model
   const directionVector = {
-    x: direction.x === 'right' ? 1 : direction.x === 'left' ? -1 : 0,
-    y: direction.y === 'down' ? 1 : direction.y === 'up' ? -1 : 0,
+    x: direction === 'right' ? 1 : direction === 'left' ? -1 : 0,
+    y: direction === 'down' ? 1 : direction === 'up' ? -1 : 0,
   };
   
   // Game loop
@@ -243,7 +243,7 @@ function Scene3D() {
     if (gamePhase !== "playing") return;
     
     // Get the game speed based on difficulty
-    const gameSpeed = snake.getGameSpeed();
+    const gameSpeed = 200; // Default speed
     
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -285,9 +285,8 @@ function Scene3D() {
     <>
       <PerspectiveCamera 
         makeDefault 
-        position={cameraPosition} 
+        position={[cameraPosition[0], cameraPosition[1], cameraPosition[2]]}
         fov={50}
-        lookAt={[snake.boardSize.width/2, 0, snake.boardSize.height/2]}
       />
       
       <OrbitControls 
