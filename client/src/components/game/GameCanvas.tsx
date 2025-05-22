@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useSnakeGame } from "@/lib/stores/useSnakeGame";
 import { useAudio } from "@/lib/stores/useAudio";
 
@@ -16,7 +16,6 @@ export default function GameCanvas() {
     setDirection,
     updateGame,
     endGame,
-    score,
     getGameSpeed
   } = useSnakeGame();
   
@@ -58,8 +57,6 @@ export default function GameCanvas() {
   // Game loop
   useEffect(() => {
     if (gamePhase !== "playing") return;
-
-    const previousScore = score;
     
     // Get game speed based on current difficulty
     const gameSpeed = getGameSpeed();
@@ -83,7 +80,7 @@ export default function GameCanvas() {
     return () => {
       clearInterval(gameInterval);
     };
-  }, [gamePhase, updateGame, endGame, playHit, playSuccess, score]);
+  }, [gamePhase, updateGame, endGame, playHit, playSuccess, playMove, getGameSpeed]);
 
   // Canvas rendering
   useEffect(() => {
@@ -194,152 +191,181 @@ export default function GameCanvas() {
     );
     ctx.fill();
 
-    // Draw snake body segments with rounded corners for a more realistic look
-    snake.body.forEach((segment, index, segments) => {
-      // Head has a different color
-      if (index === 0) {
-        ctx.fillStyle = "#228B22"; // Forest Green for head
-      } else {
-        // Create a gradient from dark to light green for the body
-        // This creates a more natural snake-like appearance
-        const greenIntensity = Math.max(40, 80 - index * 1.5);
-        ctx.fillStyle = `hsl(103, 85%, ${greenIntensity}%)`;
-      }
-      
-      // Draw rounded snake segments instead of squares
+    // Draw snake with realistic, smooth body segments
+    snake.body.forEach((segment, index) => {
       const x = segment.x * CELL_SIZE;
       const y = segment.y * CELL_SIZE;
-      const size = CELL_SIZE - 2;
-      const radius = size / 3; // Rounded corners
+      const centerX = x + CELL_SIZE/2;
+      const centerY = y + CELL_SIZE/2;
       
-      // Draw rounded rectangle for each segment
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + size - radius, y);
-      ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
-      ctx.lineTo(x + size, y + size - radius);
-      ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-      ctx.lineTo(x + radius, y + size);
-      ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Add scales pattern for body segments (except head)
-      if (index > 0) {
-        const intensity = Math.max(40, 80 - index * 1.5);
-        ctx.strokeStyle = `hsla(103, 85%, ${Math.max(30, intensity - 15)}%, 0.5)`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x + size/2, y + size/3);
-        ctx.lineTo(x + size/2, y + size*2/3);
-        ctx.stroke();
-      }
-      
-      // Add eyes and tongue to the head
       if (index === 0) {
-        // Eyes
-        ctx.fillStyle = "#000"; // Black eyes
-        const eyeSize = CELL_SIZE / 5;
-        const eyeOffset = CELL_SIZE / 3.5;
+        // Head segment - darker green
+        ctx.fillStyle = "#2C8A32";
+        
+        // Draw snake head
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, CELL_SIZE/2 - 1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add realistic eyes
+        const eyeSize = CELL_SIZE / 6;
+        let leftEyeX, leftEyeY, rightEyeX, rightEyeY;
         
         // Position eyes based on direction
-        let leftEyeX, leftEyeY, rightEyeX, rightEyeY;
-        let tongueStartX, tongueStartY, tongueMidX, tongueMidY, tongueEndX, tongueEndY;
-        
         switch(direction) {
           case "up":
-            leftEyeX = segment.x * CELL_SIZE + eyeOffset;
-            leftEyeY = segment.y * CELL_SIZE + eyeOffset;
-            rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            rightEyeY = segment.y * CELL_SIZE + eyeOffset;
-            
-            // Tongue position for up direction
-            tongueStartX = x + size/2;
-            tongueStartY = y;
-            tongueMidX = tongueStartX;
-            tongueMidY = tongueStartY - size/3;
-            tongueEndX = tongueStartX - size/4;
-            tongueEndY = tongueMidY - size/4;
+            leftEyeX = centerX - CELL_SIZE/4;
+            leftEyeY = centerY - CELL_SIZE/6;
+            rightEyeX = centerX + CELL_SIZE/4;
+            rightEyeY = centerY - CELL_SIZE/6;
             break;
           case "down":
-            leftEyeX = segment.x * CELL_SIZE + eyeOffset;
-            leftEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            
-            // Tongue position for down direction
-            tongueStartX = x + size/2;
-            tongueStartY = y + size;
-            tongueMidX = tongueStartX;
-            tongueMidY = tongueStartY + size/3;
-            tongueEndX = tongueStartX + size/4;
-            tongueEndY = tongueMidY + size/4;
+            leftEyeX = centerX - CELL_SIZE/4;
+            leftEyeY = centerY + CELL_SIZE/6;
+            rightEyeX = centerX + CELL_SIZE/4;
+            rightEyeY = centerY + CELL_SIZE/6;
             break;
           case "left":
-            leftEyeX = segment.x * CELL_SIZE + eyeOffset;
-            leftEyeY = segment.y * CELL_SIZE + eyeOffset;
-            rightEyeX = segment.x * CELL_SIZE + eyeOffset;
-            rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            
-            // Tongue position for left direction
-            tongueStartX = x;
-            tongueStartY = y + size/2;
-            tongueMidX = tongueStartX - size/3;
-            tongueMidY = tongueStartY;
-            tongueEndX = tongueMidX - size/4;
-            tongueEndY = tongueMidY - size/4;
+            leftEyeX = centerX - CELL_SIZE/6;
+            leftEyeY = centerY - CELL_SIZE/4;
+            rightEyeX = centerX - CELL_SIZE/6;
+            rightEyeY = centerY + CELL_SIZE/4;
             break;
           case "right":
-            leftEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            leftEyeY = segment.y * CELL_SIZE + eyeOffset;
-            rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
-            
-            // Tongue position for right direction
-            tongueStartX = x + size;
-            tongueStartY = y + size/2;
-            tongueMidX = tongueStartX + size/3;
-            tongueMidY = tongueStartY;
-            tongueEndX = tongueMidX + size/4;
-            tongueEndY = tongueMidY + size/4;
+            leftEyeX = centerX + CELL_SIZE/6;
+            leftEyeY = centerY - CELL_SIZE/4;
+            rightEyeX = centerX + CELL_SIZE/6;
+            rightEyeY = centerY + CELL_SIZE/4;
             break;
         }
         
-        // Draw eyes (circular)
+        // Draw black eyes
+        ctx.fillStyle = "black";
         ctx.beginPath();
-        ctx.arc(leftEyeX + eyeSize/2, leftEyeY + eyeSize/2, eyeSize/2, 0, Math.PI * 2);
+        ctx.arc(leftEyeX, leftEyeY, eyeSize, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(rightEyeX + eyeSize/2, rightEyeY + eyeSize/2, eyeSize/2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add white reflection to eyes
-        ctx.fillStyle = "#fff";
-        ctx.beginPath();
-        ctx.arc(leftEyeX + eyeSize/2 - 1, leftEyeY + eyeSize/2 - 1, eyeSize/5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(rightEyeX + eyeSize/2 - 1, rightEyeY + eyeSize/2 - 1, eyeSize/5, 0, Math.PI * 2);
+        ctx.arc(rightEyeX, rightEyeY, eyeSize, 0, Math.PI * 2);
         ctx.fill();
         
-        // Occasionally show tongue (based on time)
+        // Add white reflection to eyes for realism
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(leftEyeX - eyeSize/3, leftEyeY - eyeSize/3, eyeSize/3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rightEyeX - eyeSize/3, rightEyeY - eyeSize/3, eyeSize/3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Occasionally show tongue flicking (every few seconds)
         if (Date.now() % 3000 < 300) {
-          // Draw forked tongue
-          ctx.strokeStyle = "#FF3366";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(tongueStartX, tongueStartY);
-          ctx.lineTo(tongueMidX, tongueMidY);
-          ctx.lineTo(tongueEndX, tongueEndY);
-          ctx.stroke();
+          ctx.strokeStyle = "#e74c3c"; // Red tongue
+          ctx.lineWidth = 1.5;
           
-          // Other fork of tongue
-          ctx.beginPath();
-          ctx.moveTo(tongueMidX, tongueMidY);
-          ctx.lineTo(tongueMidX + (tongueMidX - tongueEndX), tongueEndY);
-          ctx.stroke();
+          // Position tongue based on direction
+          let tongueStartX = centerX;
+          let tongueStartY = centerY;
+          const tongueLength = CELL_SIZE * 0.7;
+          
+          // Adjust tongue start position based on direction
+          switch(direction) {
+            case "up":
+              tongueStartY = y;
+              break;
+            case "down":
+              tongueStartY = y + CELL_SIZE;
+              break;
+            case "left":
+              tongueStartX = x;
+              break;
+            case "right":
+              tongueStartX = x + CELL_SIZE;
+              break;
+          }
+          
+          // Add subtle wiggle effect
+          const wiggle = Math.sin(Date.now() / 100) * 2;
+          
+          // Draw forked tongue based on direction
+          if (direction === "up") {
+            // Left fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX - tongueLength/3, tongueStartY - tongueLength/2 + wiggle);
+            ctx.stroke();
+            
+            // Right fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX + tongueLength/3, tongueStartY - tongueLength/2 + wiggle);
+            ctx.stroke();
+          } else if (direction === "down") {
+            // Left fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX - tongueLength/3, tongueStartY + tongueLength/2 + wiggle);
+            ctx.stroke();
+            
+            // Right fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX + tongueLength/3, tongueStartY + tongueLength/2 + wiggle);
+            ctx.stroke();
+          } else if (direction === "left") {
+            // Upper fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX - tongueLength/2, tongueStartY - tongueLength/3 + wiggle);
+            ctx.stroke();
+            
+            // Lower fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX - tongueLength/2, tongueStartY + tongueLength/3 + wiggle);
+            ctx.stroke();
+          } else { // right
+            // Upper fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX + tongueLength/2, tongueStartY - tongueLength/3 + wiggle);
+            ctx.stroke();
+            
+            // Lower fork
+            ctx.beginPath();
+            ctx.moveTo(tongueStartX, tongueStartY);
+            ctx.lineTo(tongueStartX + tongueLength/2, tongueStartY + tongueLength/3 + wiggle);
+            ctx.stroke();
+          }
+        }
+      } else {
+        // Body segments - gradient color toward tail
+        const colorValue = Math.min(95, 65 + index * 2);
+        ctx.fillStyle = `hsl(103, 85%, ${colorValue}%)`;
+        
+        // Draw slightly smaller segments toward tail for tapering effect
+        const radius = CELL_SIZE/2 - 1 - (index * 0.05);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add subtle scale texture to body segments
+        if (index > 0 && index < 8) {
+          ctx.fillStyle = `hsla(103, 85%, ${colorValue - 10}%, 0.3)`;
+          
+          // Create scale pattern with small arcs
+          const scaleRadius = 1.5;
+          const scaleCount = 5;
+          const scaleOffset = CELL_SIZE * 0.3;
+          
+          for (let j = 0; j < scaleCount; j++) {
+            const angle = (j / scaleCount) * Math.PI * 2;
+            const scaleX = centerX + Math.cos(angle) * scaleOffset;
+            const scaleY = centerY + Math.sin(angle) * scaleOffset;
+            
+            ctx.beginPath();
+            ctx.arc(scaleX, scaleY, scaleRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
     });
