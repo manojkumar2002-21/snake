@@ -4,6 +4,7 @@ import { create } from "zustand";
 type Direction = "up" | "down" | "left" | "right";
 type GamePhase = "ready" | "playing" | "ended";
 type UpdateResult = "move" | "eat" | "collision";
+type DifficultyLevel = "easy" | "medium" | "hard";
 
 interface Position {
   x: number;
@@ -24,6 +25,7 @@ interface SnakeGameState {
   // Game state
   gamePhase: GamePhase;
   score: number;
+  difficulty: DifficultyLevel;
   direction: Direction;
   snake: Snake;
   food: Position;
@@ -33,7 +35,11 @@ interface SnakeGameState {
   restartGame: () => void;
   endGame: () => void;
   setDirection: (direction: Direction) => void;
+  setDifficulty: (level: DifficultyLevel) => void;
   updateGame: () => UpdateResult;
+  
+  // Game info
+  getGameSpeed: () => number;
 }
 
 // Constants for the game
@@ -89,6 +95,7 @@ export const useSnakeGame = create<SnakeGameState>((set, get) => {
     // Initial state
     gamePhase: "ready",
     score: 0,
+    difficulty: "medium", // Default difficulty
     direction: "right",
     snake: initialSnake,
     food: generateFoodPosition(initialSnake.body),
@@ -115,6 +122,25 @@ export const useSnakeGame = create<SnakeGameState>((set, get) => {
     
     setDirection: (direction) => {
       set({ direction });
+    },
+    
+    setDifficulty: (difficulty) => {
+      set({ difficulty });
+    },
+    
+    // Get game speed based on difficulty level
+    getGameSpeed: () => {
+      const { difficulty } = get();
+      switch (difficulty) {
+        case "easy":
+          return 250; // Slower
+        case "medium":
+          return 175; // Medium speed
+        case "hard":
+          return 100; // Faster
+        default:
+          return 175;
+      }
     },
     
     updateGame: () => {

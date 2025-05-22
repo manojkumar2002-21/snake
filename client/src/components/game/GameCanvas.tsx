@@ -19,7 +19,7 @@ export default function GameCanvas() {
     score
   } = useSnakeGame();
   
-  const { playHit, playSuccess } = useAudio();
+  const { playHit, playSuccess, playMove } = useAudio();
 
   // Handle keyboard controls
   useEffect(() => {
@@ -70,6 +70,9 @@ export default function GameCanvas() {
         playHit();
         endGame();
         clearInterval(gameInterval);
+      } else if (result === "move") {
+        // Play subtle movement sound as snake moves
+        playMove();
       }
     }, GAME_SPEED);
 
