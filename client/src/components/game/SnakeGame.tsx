@@ -8,15 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, Gauge } from "lucide-react";
 
 export default function SnakeGame() {
   const { 
     score,
     gamePhase,
+    difficulty,
     startGame,
-    restartGame
+    restartGame,
+    setDifficulty
   } = useSnakeGame();
   
   const { 
@@ -78,24 +81,49 @@ export default function SnakeGame() {
       <CardHeader className="space-y-1 pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-2xl font-bold">Snake Game</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="mute-toggle"
-              checked={!isMuted}
-              onCheckedChange={toggleMute}
-            />
-            <Label htmlFor="mute-toggle" className="flex items-center">
-              {isMuted ? (
-                <VolumeX className="h-4 w-4 mr-1 text-muted-foreground" />
-              ) : (
-                <Volume2 className="h-4 w-4 mr-1 text-primary" />
-              )}
-              Sound
-            </Label>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="mute-toggle"
+                checked={!isMuted}
+                onCheckedChange={toggleMute}
+              />
+              <Label htmlFor="mute-toggle" className="flex items-center">
+                {isMuted ? (
+                  <VolumeX className="h-4 w-4 mr-1 text-muted-foreground" />
+                ) : (
+                  <Volume2 className="h-4 w-4 mr-1 text-primary" />
+                )}
+                Sound
+              </Label>
+            </div>
           </div>
         </div>
-        <div className="text-2xl font-bold text-primary">
-          Score: {score}
+        
+        <div className="flex justify-between items-center mt-2">
+          <div className="text-2xl font-bold text-primary">
+            Score: {score}
+          </div>
+          
+          {/* Only show difficulty selector when not playing */}
+          {gamePhase !== "playing" && (
+            <div className="flex items-center">
+              <Gauge className="h-4 w-4 mr-2 text-muted-foreground" />
+              <Select 
+                value={difficulty} 
+                onValueChange={(value) => setDifficulty(value as "easy" | "medium" | "hard")}
+              >
+                <SelectTrigger className="w-[110px] h-8">
+                  <SelectValue placeholder="Difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </CardHeader>
       

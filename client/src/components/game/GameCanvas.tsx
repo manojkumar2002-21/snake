@@ -4,7 +4,7 @@ import { useAudio } from "@/lib/stores/useAudio";
 
 // Game constants
 const CELL_SIZE = 20; // Size of each cell in pixels
-const GAME_SPEED = 200; // Update interval in milliseconds (slowed down for more realistic movement)
+// Game speed is now controlled by the difficulty level in the useSnakeGame store
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,7 +16,8 @@ export default function GameCanvas() {
     setDirection,
     updateGame,
     endGame,
-    score
+    score,
+    getGameSpeed
   } = useSnakeGame();
   
   const { playHit, playSuccess, playMove } = useAudio();
@@ -60,6 +61,9 @@ export default function GameCanvas() {
 
     const previousScore = score;
     
+    // Get game speed based on current difficulty
+    const gameSpeed = getGameSpeed();
+    
     const gameInterval = setInterval(() => {
       const result = updateGame();
       
@@ -74,7 +78,7 @@ export default function GameCanvas() {
         // Play subtle movement sound as snake moves
         playMove();
       }
-    }, GAME_SPEED);
+    }, gameSpeed);
 
     return () => {
       clearInterval(gameInterval);
