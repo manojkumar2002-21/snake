@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useSnakeGame } from "@/lib/stores/useSnakeGame";
 import { useAudio } from "@/lib/stores/useAudio";
 
 // Game constants
 const CELL_SIZE = 20; // Size of each cell in pixels
-const GAME_SPEED = 100; // Update interval in milliseconds
+const GAME_SPEED = 200; // Update interval in milliseconds (slowed down for more realistic movement)
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,13 +95,44 @@ export default function GameCanvas() {
     canvas.width = boardWidth;
     canvas.height = boardHeight;
 
-    // Draw background grid
-    ctx.fillStyle = "#f5f5f5";
+    // Draw grass-like background 
+    // Create a gradient background (light green to darker green)
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, boardHeight);
+    bgGradient.addColorStop(0, "#e1f5c4");
+    bgGradient.addColorStop(1, "#c7e9b0");
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, boardWidth, boardHeight);
     
-    // Draw grid lines
-    ctx.strokeStyle = "#e0e0e0";
-    ctx.lineWidth = 0.5;
+    // Add grass texture pattern
+    ctx.strokeStyle = "#97cc76";
+    ctx.lineWidth = 0.7;
+    
+    // Draw subtle grass patches
+    for (let i = 0; i < 40; i++) {
+      const x = Math.floor(Math.random() * boardWidth);
+      const y = Math.floor(Math.random() * boardHeight);
+      const size = 5 + Math.random() * 8;
+      
+      // Each patch has multiple blades
+      for (let j = 0; j < 3; j++) {
+        const bladeX = x + Math.random() * 5 - 2.5;
+        const bladeHeight = 3 + Math.random() * size;
+        
+        ctx.beginPath();
+        ctx.moveTo(bladeX, y);
+        ctx.quadraticCurveTo(
+          bladeX + (Math.random() * 4 - 2), 
+          y - bladeHeight/2, 
+          bladeX + (Math.random() * 2 - 1), 
+          y - bladeHeight
+        );
+        ctx.stroke();
+      }
+    }
+    
+    // Draw subtle grid lines for gameplay clarity
+    ctx.strokeStyle = "rgba(150, 200, 120, 0.3)";
+    ctx.lineWidth = 0.3;
     
     // Vertical lines
     for (let x = 0; x <= boardWidth; x += CELL_SIZE) {
@@ -119,40 +150,96 @@ export default function GameCanvas() {
       ctx.stroke();
     }
 
-    // Draw food
-    ctx.fillStyle = "#ff4d4f";
-    ctx.beginPath();
+    // Draw realistic apple-like food
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
-    ctx.arc(foodX, foodY, CELL_SIZE / 2 - 2, 0, 2 * Math.PI);
+    const foodRadius = CELL_SIZE / 2 - 2;
+    
+    // Apple body (red with gradient)
+    const gradient = ctx.createRadialGradient(
+      foodX - foodRadius/3, foodY - foodRadius/3, foodRadius/10,
+      foodX, foodY, foodRadius
+    );
+    gradient.addColorStop(0, "#ff5e3a");
+    gradient.addColorStop(0.5, "#e41e25");
+    gradient.addColorStop(1, "#c41c23");
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, foodRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Add stem
+    ctx.fillStyle = "#553311";
+    ctx.fillRect(foodX - 1, foodY - foodRadius - 3, 2, 4);
+    
+    // Add shine/highlight
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.beginPath();
+    ctx.ellipse(
+      foodX - foodRadius/3, 
+      foodY - foodRadius/3, 
+      foodRadius/2, 
+      foodRadius/4, 
+      Math.PI/4, 
+      0, 
+      2 * Math.PI
+    );
     ctx.fill();
 
-    // Draw snake body segments
-    snake.body.forEach((segment, index) => {
+    // Draw snake body segments with rounded corners for a more realistic look
+    snake.body.forEach((segment, index, segments) => {
       // Head has a different color
       if (index === 0) {
-        ctx.fillStyle = "#389e0d";
+        ctx.fillStyle = "#228B22"; // Forest Green for head
       } else {
         // Create a gradient from dark to light green for the body
-        const greenIntensity = Math.max(60, 100 - index * 2);
-        ctx.fillStyle = `hsl(103, 80%, ${greenIntensity}%)`;
+        // This creates a more natural snake-like appearance
+        const greenIntensity = Math.max(40, 80 - index * 1.5);
+        ctx.fillStyle = `hsl(103, 85%, ${greenIntensity}%)`;
       }
       
-      ctx.fillRect(
-        segment.x * CELL_SIZE + 1,
-        segment.y * CELL_SIZE + 1,
-        CELL_SIZE - 2,
-        CELL_SIZE - 2
-      );
+      // Draw rounded snake segments instead of squares
+      const x = segment.x * CELL_SIZE;
+      const y = segment.y * CELL_SIZE;
+      const size = CELL_SIZE - 2;
+      const radius = size / 3; // Rounded corners
       
-      // Add eyes to the head
+      // Draw rounded rectangle for each segment
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + size - radius, y);
+      ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+      ctx.lineTo(x + size, y + size - radius);
+      ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+      ctx.lineTo(x + radius, y + size);
+      ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Add scales pattern for body segments (except head)
+      if (index > 0) {
+        const intensity = Math.max(40, 80 - index * 1.5);
+        ctx.strokeStyle = `hsla(103, 85%, ${Math.max(30, intensity - 15)}%, 0.5)`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x + size/2, y + size/3);
+        ctx.lineTo(x + size/2, y + size*2/3);
+        ctx.stroke();
+      }
+      
+      // Add eyes and tongue to the head
       if (index === 0) {
-        ctx.fillStyle = "#fff";
-        const eyeSize = CELL_SIZE / 6;
-        const eyeOffset = CELL_SIZE / 4;
+        // Eyes
+        ctx.fillStyle = "#000"; // Black eyes
+        const eyeSize = CELL_SIZE / 5;
+        const eyeOffset = CELL_SIZE / 3.5;
         
         // Position eyes based on direction
         let leftEyeX, leftEyeY, rightEyeX, rightEyeY;
+        let tongueStartX, tongueStartY, tongueMidX, tongueMidY, tongueEndX, tongueEndY;
         
         switch(direction) {
           case "up":
@@ -160,31 +247,93 @@ export default function GameCanvas() {
             leftEyeY = segment.y * CELL_SIZE + eyeOffset;
             rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
             rightEyeY = segment.y * CELL_SIZE + eyeOffset;
+            
+            // Tongue position for up direction
+            tongueStartX = x + size/2;
+            tongueStartY = y;
+            tongueMidX = tongueStartX;
+            tongueMidY = tongueStartY - size/3;
+            tongueEndX = tongueStartX - size/4;
+            tongueEndY = tongueMidY - size/4;
             break;
           case "down":
             leftEyeX = segment.x * CELL_SIZE + eyeOffset;
             leftEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
             rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
             rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
+            
+            // Tongue position for down direction
+            tongueStartX = x + size/2;
+            tongueStartY = y + size;
+            tongueMidX = tongueStartX;
+            tongueMidY = tongueStartY + size/3;
+            tongueEndX = tongueStartX + size/4;
+            tongueEndY = tongueMidY + size/4;
             break;
           case "left":
             leftEyeX = segment.x * CELL_SIZE + eyeOffset;
             leftEyeY = segment.y * CELL_SIZE + eyeOffset;
             rightEyeX = segment.x * CELL_SIZE + eyeOffset;
             rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
+            
+            // Tongue position for left direction
+            tongueStartX = x;
+            tongueStartY = y + size/2;
+            tongueMidX = tongueStartX - size/3;
+            tongueMidY = tongueStartY;
+            tongueEndX = tongueMidX - size/4;
+            tongueEndY = tongueMidY - size/4;
             break;
           case "right":
             leftEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
             leftEyeY = segment.y * CELL_SIZE + eyeOffset;
             rightEyeX = segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
             rightEyeY = segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize;
+            
+            // Tongue position for right direction
+            tongueStartX = x + size;
+            tongueStartY = y + size/2;
+            tongueMidX = tongueStartX + size/3;
+            tongueMidY = tongueStartY;
+            tongueEndX = tongueMidX + size/4;
+            tongueEndY = tongueMidY + size/4;
             break;
         }
         
-        // Draw eyes
+        // Draw eyes (circular)
         ctx.beginPath();
-        ctx.fillRect(leftEyeX, leftEyeY, eyeSize, eyeSize);
-        ctx.fillRect(rightEyeX, rightEyeY, eyeSize, eyeSize);
+        ctx.arc(leftEyeX + eyeSize/2, leftEyeY + eyeSize/2, eyeSize/2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rightEyeX + eyeSize/2, rightEyeY + eyeSize/2, eyeSize/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add white reflection to eyes
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(leftEyeX + eyeSize/2 - 1, leftEyeY + eyeSize/2 - 1, eyeSize/5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rightEyeX + eyeSize/2 - 1, rightEyeY + eyeSize/2 - 1, eyeSize/5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Occasionally show tongue (based on time)
+        if (Date.now() % 3000 < 300) {
+          // Draw forked tongue
+          ctx.strokeStyle = "#FF3366";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(tongueStartX, tongueStartY);
+          ctx.lineTo(tongueMidX, tongueMidY);
+          ctx.lineTo(tongueEndX, tongueEndY);
+          ctx.stroke();
+          
+          // Other fork of tongue
+          ctx.beginPath();
+          ctx.moveTo(tongueMidX, tongueMidY);
+          ctx.lineTo(tongueMidX + (tongueMidX - tongueEndX), tongueEndY);
+          ctx.stroke();
+        }
       }
     });
 

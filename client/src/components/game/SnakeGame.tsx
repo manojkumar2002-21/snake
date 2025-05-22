@@ -9,6 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Volume2, VolumeX } from "lucide-react";
 
 export default function SnakeGame() {
   const { 
@@ -22,7 +23,11 @@ export default function SnakeGame() {
     isMuted, 
     toggleMute, 
     setHitSound, 
-    setSuccessSound 
+    setSuccessSound,
+    setMoveSound,
+    setBackgroundMusic,
+    startBackgroundMusic,
+    stopBackgroundMusic
   } = useAudio();
   
   const [isInitialized, setIsInitialized] = useState(false);
@@ -35,9 +40,13 @@ export default function SnakeGame() {
     try {
       const hitSoundEffect = new Audio("/sounds/hit.mp3");
       const successSoundEffect = new Audio("/sounds/success.mp3");
+      const moveSoundEffect = new Audio("/sounds/move.mp3");
+      const backgroundMusicEffect = new Audio("/sounds/background.mp3");
       
       setHitSound(hitSoundEffect);
       setSuccessSound(successSoundEffect);
+      setMoveSound(moveSoundEffect);
+      setBackgroundMusic(backgroundMusicEffect);
       
       setIsInitialized(true);
       
@@ -45,7 +54,21 @@ export default function SnakeGame() {
     } catch (error) {
       console.error("Failed to load sound effects:", error);
     }
-  }, [isInitialized, setHitSound, setSuccessSound]);
+  }, [isInitialized, setHitSound, setSuccessSound, setMoveSound, setBackgroundMusic]);
+
+  // Manage background music based on game phase
+  useEffect(() => {
+    if (gamePhase === "playing") {
+      startBackgroundMusic();
+    } else if (gamePhase === "ended") {
+      stopBackgroundMusic();
+    }
+    
+    // Clean up on component unmount
+    return () => {
+      stopBackgroundMusic();
+    };
+  }, [gamePhase, startBackgroundMusic, stopBackgroundMusic]);
 
   return (
     <Card className={cn(
@@ -61,7 +84,14 @@ export default function SnakeGame() {
               checked={!isMuted}
               onCheckedChange={toggleMute}
             />
-            <Label htmlFor="mute-toggle">Sound</Label>
+            <Label htmlFor="mute-toggle" className="flex items-center">
+              {isMuted ? (
+                <VolumeX className="h-4 w-4 mr-1 text-muted-foreground" />
+              ) : (
+                <Volume2 className="h-4 w-4 mr-1 text-primary" />
+              )}
+              Sound
+            </Label>
           </div>
         </div>
         <div className="text-2xl font-bold text-primary">
