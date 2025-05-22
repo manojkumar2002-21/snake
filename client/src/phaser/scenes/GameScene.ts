@@ -4,7 +4,7 @@ export default class GameScene extends Phaser.Scene {
   // Game properties
   private snake: Phaser.GameObjects.Graphics[] = [];
   private food: Phaser.GameObjects.Graphics | null = null;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: { x: number; y: number } = { x: 0, y: -1 };
   private nextDirection: { x: number; y: number } = { x: 0, y: -1 };
   private moveTime = 0;
@@ -45,21 +45,23 @@ export default class GameScene extends Phaser.Scene {
     this.moveSound = this.sound.add('move', { volume: 0.3 });
     
     // Set up keyboard input
-    this.cursors = this.input.keyboard ? this.input.keyboard.createCursorKeys() : null;
-    
-    // Additional keyboard bindings (WASD)
-    this.input.keyboard?.on('keydown-W', () => {
-      this.updateDirection(0, -1);
-    });
-    this.input.keyboard?.on('keydown-S', () => {
-      this.updateDirection(0, 1);
-    });
-    this.input.keyboard?.on('keydown-A', () => {
-      this.updateDirection(-1, 0);
-    });
-    this.input.keyboard?.on('keydown-D', () => {
-      this.updateDirection(1, 0);
-    });
+    if (this.input.keyboard) {
+      this.cursors = this.input.keyboard.createCursorKeys();
+      
+      // Additional keyboard bindings (WASD)
+      this.input.keyboard.on('keydown-W', () => {
+        this.updateDirection(0, -1);
+      });
+      this.input.keyboard.on('keydown-S', () => {
+        this.updateDirection(0, 1);
+      });
+      this.input.keyboard.on('keydown-A', () => {
+        this.updateDirection(-1, 0);
+      });
+      this.input.keyboard.on('keydown-D', () => {
+        this.updateDirection(1, 0);
+      });
+    }
     
     // Initialize snake position
     this.snakeHead = { 
@@ -106,13 +108,13 @@ export default class GameScene extends Phaser.Scene {
     
     // Handle keyboard input
     if (this.cursors) {
-      if (this.cursors.left.isDown) {
+      if (this.cursors.left?.isDown) {
         this.updateDirection(-1, 0);
-      } else if (this.cursors.right.isDown) {
+      } else if (this.cursors.right?.isDown) {
         this.updateDirection(1, 0);
-      } else if (this.cursors.up.isDown) {
+      } else if (this.cursors.up?.isDown) {
         this.updateDirection(0, -1);
-      } else if (this.cursors.down.isDown) {
+      } else if (this.cursors.down?.isDown) {
         this.updateDirection(0, 1);
       }
     }
